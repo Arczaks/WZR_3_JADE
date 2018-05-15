@@ -11,7 +11,6 @@ import jade.core.Agent;
 import jade.core.behaviours.*;
 import jade.lang.acl.*;
 import java.util.*;
-import java.lang.*;
 
 
 public class BookSellerAgent extends Agent
@@ -20,6 +19,7 @@ public class BookSellerAgent extends Agent
   private Hashtable catalogue;
 
   // Inicjalizacja klasy agenta:
+  @Override
   protected void setup()
   {
     // Tworzenie katalogu książek jako tablicy rozproszonej
@@ -45,6 +45,7 @@ public class BookSellerAgent extends Agent
   }
 
   // Metoda realizująca zakończenie pracy agenta:
+  @Override
   protected void takeDown()
   {
     System.out.println("Agent-sprzedawca (wersja c 2017/18) "+getAID().getName()+" zakończył działalność.");
@@ -61,18 +62,27 @@ public class BookSellerAgent extends Agent
     */
     class OfferRequestsServer extends CyclicBehaviour
     {
+        private Integer step = 0;
         private Integer lastPrice = -1;
         @Override
         public void action() {
             // Tworzenie szablonu wiadomości (wstępne określenie tego, co powinna zawierać wiadomość)
-            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.CFP);
-            MessageTemplate mt2 = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);
-            // Próba odbioru wiadomości zgodnej z szablonem:
-            ACLMessage msg2 = myAgent.receive(mt2);
-            ACLMessage msg = myAgent.receive(mt);
+            System.out.println("Agen-sprzedawca AKCJA");
+            ACLMessage msg, msg2;
+            if (step == 0){
+                System.out.println(step);
+                MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.CFP);  
+                msg = myAgent.receive(mt);
+                msg2 = null;
+            } else {
+                System.out.println(step);
+                MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
+                msg2 = myAgent.receive();
+                msg = null;
+            }
 
             if (msg != null || msg2 != null){
-                //System.out.println("Agent-sprzedawca cos odebrano");
+                System.out.println("Agent-sprzedawca cos odebrano");
                 if (msg != null) {  // jeśli nadeszła wiadomość zgodna z ustalonym wcześniej szablonem
                     System.out.println("1");
                     String title = msg.getContent();  // odczytanie tytułu zamawianej książki
@@ -83,8 +93,9 @@ public class BookSellerAgent extends Agent
                     if (price != null) {                                // jeśli taki tytuł jest dostępny
                         reply.setPerformative(ACLMessage.PROPOSE);            // ustalenie typu wiadomości (propozycja)
                         reply.setContent(String.valueOf(price.intValue()));   // umieszczenie ceny w polu zawartości (content)
-                        System.out.println("Agent-sprzedawca "+getAID().getName()+" odpowiada: "+ price.intValue());
+                        System.out.println("Agent-sprzedawca "+getAID().getName()+" odpowiada: "+ price);
                     }
+                    step = 1;
                     myAgent.send(reply);
                 } else {  
                     if (msg2 != null){
@@ -96,7 +107,7 @@ public class BookSellerAgent extends Agent
                         if (cenaDoWyslania != null) {                                // jeśli taki tytuł jest dostępny
                             reply.setPerformative(ACLMessage.PROPOSE);            // ustalenie typu wiadomości (propozycja)
                             reply.setContent(String.valueOf(cenaDoWyslania.intValue()));   // umieszczenie ceny w polu zawartości (content)
-                            System.out.println("Agent-sprzedawca "+getAID().getName()+" odpowiada: "+ cenaDoWyslania.intValue());
+                            System.out.println("Agent-sprzedawca "+getAID().getName()+" odpowiada: "+ cenaDoWyslania);
                         } 
                         myAgent.send(reply);
                 } else {
@@ -110,7 +121,8 @@ public class BookSellerAgent extends Agent
                 }
               }
             } else {                    // jeśli wiadomość nie nadeszła, lub była niezgodna z szablonem{
-              block();                 // blokada metody action() dopóki nie pojawi się nowa wiadomość
+                System.out.println("Agent-sprzedawca: " + this.myAgent.getAID().getName() + " czeka");
+                block();                 // blokada metody action() dopóki nie pojawi się nowa wiadomość
             }
         }
     } // Koniec klasy wewnętrznej będącej rozszerzeniem klasy CyclicBehaviour
@@ -118,6 +130,7 @@ public class BookSellerAgent extends Agent
 
     class PurchaseOrdersServer extends CyclicBehaviour
     {
+      @Override
       public void action()
       {
         ACLMessage msg = myAgent.receive();
